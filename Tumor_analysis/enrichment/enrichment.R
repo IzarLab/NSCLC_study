@@ -3,7 +3,7 @@
 # Script Name: enrichment.R
 # Last Updated: 09/01/2022
 
-#Instructions
+# Load packages
 #install.packages("enrichR")
 library(enrichR)
 library(ggplot2)
@@ -18,7 +18,7 @@ if (websiteLive) head(dbs)
 
 # combine both Cancer hallmarks (ch) and GO
 
-#tumor
+# gene set
 mylist <- c('ANKRD36C',
             'C3',
             'CXCL2',
@@ -134,6 +134,7 @@ mylist <- c('ANKRD36C',
             'ANGPTL4')
 tumor.mylist <- mylist
 
+# list which pathway sets need to scored 
 dbs <- c("MSigDB_Hallmark_2020","GO_Biological_Process_2021")
 if (websiteLive) {
   #enriched <- enrichr(unique(mylist[1:100,1]), dbs)
@@ -143,9 +144,11 @@ if (websiteLive) {
 
 #mut_enr<-mutate(enriched[[1]], qscore = -log(Adjusted.P.value, base=10))
 
+# calculate qscore
 mut_enr_ch<-mutate(enriched[[1]], qscore = -log(Adjusted.P.value, base=10))
 mut_enr_go<-mutate(enriched[[2]], qscore = -log(Adjusted.P.value, base=10))
 
+# create a data frame with all pathways scored by qscore
 dim(mut_enr_ch)
 dim(mut_enr_go)
 mut_enr <- rbind.data.frame(mut_enr_ch,mut_enr_go)
@@ -161,6 +164,7 @@ h_mut_enr1 <- mut_enr[1:25,]#[1:500,]
 h_mut_enr <- h_mut_enr1
 #df[df$col1 == 1, ]
 
+# plot the result
 ggp<- h_mut_enr %>%
   #extract(Term, into = c("Term", "id"), "(.*)\\s\\((.*)\\)") %>%
   #mutate(Term=stri_trans_totitle(Term)) %>%
