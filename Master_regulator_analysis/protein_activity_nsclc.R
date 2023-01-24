@@ -1,6 +1,6 @@
 
-# Author: Somnath Tagore, Ph.D. Title: Master Regulator Analysis of Melanoma data 
-# Script Name: protein_activity_melanoma.R 
+# Author: Somnath Tagore, Ph.D. Title: Master Regulator Analysis of NSCLC data 
+# Script Name: protein_activity_nsclc.R 
 # Last Updated: 03/19/2022
 
 # Packages required for this analysis
@@ -44,7 +44,7 @@ ClusterColors <- function(k, offset = 0) {
 }
 
 #Read tumor data for each sample
-#Here, each sample correspond to categories MBM/MPM
+
 #An example snippet is given below. Please change the sample names ('sample_id') as required.
 
 sample_id <- 'PA034.rds'
