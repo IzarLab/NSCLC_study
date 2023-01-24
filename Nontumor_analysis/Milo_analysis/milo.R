@@ -20,23 +20,30 @@ library(patchwork)
 library(magrittr)
 library(ggpubr)
 
-data("pbmc_small")
+# Read data
 pbmc_small <- readRDS(file="./NSCLC_44_samples_T_cells_v6.rds")
 colnames(pbmc_small@meta.data)
 pbmc_small[['barcodes']] <- rownames(pbmc_small@meta.data)
+
+# Create a single cell experiment object
 pbmc_small_sce <- as.SingleCellExperiment(pbmc_small)
 pbmc_small_sce
+
+# Run Milo for test
 pbmc_small_milo <- Milo(pbmc_small_sce)
 
-
-
+# build graph
 traj_milo <- buildGraph(pbmc_small_milo, k = 50, d = 30)
+
+# create neighborhoods
 traj_milo <- makeNhoods(traj_milo, prop = 0.1, k = 50, d=30, refined = TRUE)
 
+# plot neigborhood size
 pdf(file="t_cells_milo_plotNhoodSizeHist_k50d30.pdf")
 plotNhoodSizeHist(traj_milo)
 dev.off()
 
+# trajectory design
 #traj_milo <- countCells(traj_milo, meta.data = data.frame(colData(traj_milo)), sample='manual.annot.fine')
 #traj_milo <- countCells(traj_milo, meta.data = data.frame(colData(traj_milo)), sample='orig.ident')
 traj_milo <- countCells(traj_milo, meta.data = data.frame(colData(traj_milo)), sample='orig.ident')
@@ -48,9 +55,9 @@ traj_design <- data.frame(colData(traj_milo))[,c("orig.ident", "manual.annot.fin
 traj_design$manual.annot.fine <- as.factor(traj_design$manual.annot.fine) 
 traj_design <- distinct(traj_design)
 
-write.csv(traj_design,file="~/Documents/Ben_Izar_Project/milo/myeloid/traj_design_k50d30_upd.csv")
+write.csv(traj_design,file="./traj_design_k50d30_upd.csv")
 
-#embryo_design
+#embryo_design and test neighborhoods
 traj_design <- distinct(traj_design)
 
 traj_milo <- calcNhoodDistance(traj_milo, d=30)
@@ -60,12 +67,10 @@ traj_milo <- calcNhoodDistance(traj_milo, d=30)
 da_results <- testNhoods(traj_milo, design = ~ PRIMARY_vs_BRAIN_METS, design.df = traj_design)
 
 write.csv(traj_design,file="traj_design_tcells_k50d30.csv")
-
-
 dim(traj_milo@nhoodCounts)
 traj_milo@nhoodCounts[1:5,1:5]
 
-
+# arrange data as per spatial FDR
 da_results %>%
   arrange(- SpatialFDR) %>%
   head()
@@ -77,13 +82,11 @@ ggplot(da_results, aes(logFC, -log10(SpatialFDR))) +
   geom_hline(yintercept = 0.03) 
 dev.off()
 
-
-
+# annotate neighborhoods as per manual annotation
 da_results <- annotateNhoods(traj_milo, da_results, coldata_col = "manual.annot.fine")
 #da_results <- annotateNhoods(traj_milo, da_results, coldata_col = "manual.annot")
 #da_results <- annotateNhoods(traj_milo, da_results, coldata_col = "cell_type_fine")
 head(da_results)
-
 
 pdf(file="t_cells_milo_da_results_single_cell_UMAP_k10d30.pdf")
 umap_pl <- plotReducedDim(traj_milo, dimred = "UMAP", colour_by="manual.annot.fine", text_by = "manual.annot.fine", 
@@ -91,8 +94,7 @@ umap_pl <- plotReducedDim(traj_milo, dimred = "UMAP", colour_by="manual.annot.fi
                           text_size = 3, point_size=0.5) + guides(fill="none")
 dev.off()
 
-
-
+# build neighborhood graph
 traj_milo <- buildNhoodGraph(traj_milo)
 
 ## Plot neighbourhood graph
@@ -102,15 +104,11 @@ nh_graph_pl <- plotNhoodGraphDA(traj_milo, da_results, layout="UMAP",alpha=0.05)
 umap_pl + nh_graph_pl + plot_layout(guides="collect")
 dev.off()
 
-
+# Optional
 da_results$manual.annot.fine <- as.factor(da_results$manual.annot.fine)
 #da_results$cell_type_fine <- as.factor(da_results$cell_type_fine)
-
 da_results$manual.annot.fine_fraction_1 <- ifelse(da_results$manual.annot.fine_fraction < 0.5, "Not_significant", "Significant")
-
 da_results$manual.annot.fine_fraction_color <- ifelse(da_results$manual.annot.fine_fraction < 0.5, "Red", "Blue")
-
-
 
 # Bee swarm plot by group
 pdf(file="t_cells_milo_da_results_plotDAbeeswarm_k50d30.pdf",height=10,width=40)
@@ -128,16 +126,12 @@ beeswarm(logFC ~ manual.annot.fine, data=da_results,
 
 dev.off()
 
-
-# Legend
-
-
 ## Plot neighbourhood graph
 pdf(file="t_cells_milo_da_results_plotDAbeeswarm_k50d30.pdf")
 plotDAbeeswarm(da_results, group.by = "manual.annot.fine_fraction")
 dev.off()
 
-
+# Finer neighborhoods
 da_results$celltype <- ifelse(da_results$manual.annot.fine_fraction < 0.7, "Mixed", da_results$manual.annot.fine_fraction)
 
 da_results <- groupNhoods(traj_milo, da_results)
@@ -158,9 +152,6 @@ plotDAbeeswarm(da_results, group.by = "manual.annot.fine")
 #plotNhoodGroups(traj_milo, da_results, layout="umap") 
 dev.off()
 
-
-
-
 # milo fractions
 
 tumor_nontumor <- read.csv(file="~/Documents/Ben_Izar_Project/milo/t-cells/t_cells_prim_vs_bm.csv")
@@ -170,6 +161,7 @@ tumor_nontumor<-tumor_nontumor[,-1]
 rownames(tumor_nontumor)
 tumor_nontumor<-as.data.frame(tumor_nontumor)
 
+#color codes
 cols = c(
   'B_cell' ='#808080',
   'Macrophage_M1' ='#d3d3d3',
@@ -213,19 +205,17 @@ p<-ggplot(data = tumor_nontumor, aes(x = Celltype, y = Milo_Fraction, fill = PRI
 ) +ggtitle("Milo Fractions (T_cells): STK11-MUT vs STK11-WT")+ #ggtitle("Milo Fractions (T_cells): PRIMARY vs BM")
    xlab("Cell types") + ylab("Milo Fractions (percentage)")+theme(axis.text.x=element_text(size=rel(1.1)))+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
- ggsave("~/Documents/Ben_Izar_Project/milo/t-cells/Milo_Fractions_T_cells_PRIMARY_BM.pdf",height = 10,width = 25)
+ ggsave("./Milo_Fractions_T_cells_PRIMARY_BM.pdf",height = 10,width = 25)
  
 
  #accuracy
- 
- 
- cols1 = c(
+  cols1 = c(
    'N' ='#808080',
    'Sig_N' ='#d3d3d3',
    'NonSig_N' ='#2f4f4f',
    'Accuracy' ='#556b2f')
    
- tumor_nontumor <- read.csv(file="~/Documents/Ben_Izar_Project/milo/t-cells/t_cells_milo_accuracy.csv")
+ tumor_nontumor <- read.csv(file="./t_cells_milo_accuracy.csv")
  #tumor_nontumor <- read.csv(file="STK11mut_vs_STK11wt_LUAD_TCGA_deconvolution_v2.csv")
  row.names(tumor_nontumor) <- tumor_nontumor[,1]
  tumor_nontumor<-tumor_nontumor[,-1]
@@ -245,7 +235,6 @@ p<-ggplot(data = tumor_nontumor, aes(x = Celltype, y = Milo_Fraction, fill = PRI
  # beeswarm /stripcharts final
  
  tumor_nontumor <- read.csv(file="./t_cells_milo_da_results_upda_k50d30_fraction_bm.stkmut.vs.stkwt.csv")
- 
  row.names(tumor_nontumor) <- tumor_nontumor[,1]
  tumor_nontumor<-tumor_nontumor[,-1]
  rownames(tumor_nontumor)
