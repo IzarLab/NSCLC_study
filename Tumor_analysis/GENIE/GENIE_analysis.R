@@ -1,3 +1,9 @@
+# Author: Somnath Tagore, Ph.D. 
+# Title: GENIE analysis 
+# Script Name: GENIE_analysis.R
+# Last Updated: 06/24/2022
+
+# Load packages
 library(matrixStats)
 library(copynumber)
 library(infercnv)
@@ -5,10 +11,9 @@ library(stringr)
 library(tidyverse)
 library(hrbrthemes)
 library(viridis)
-# Author: Somnath Tagore, Ph.D. 
-# Title: GENIE analysis 
-# Script Name: GENIE_analysis.R
-# Last Updated: 06/24/2022
+library(ggplot2)
+library("ggpubr")
+library("ggExtra")
 
 #Instructions
 # The following script performs Fraction of Genome Altered in GENIE cohort 
@@ -16,9 +21,6 @@ library(viridis)
 # -------------------------
 #!/usr/bin/env Rscript
 
-library(ggplot2)
-library("ggpubr")
-library("ggExtra")
 
 # Color palette
 colPrimvsBMmain <- c('BRAIN_METS'='#FF0000','PRIMARY'='#0000FF')
@@ -73,9 +75,12 @@ ggsave("Fraction_Genome_Altered_STK11_NonSTK11_NSCLC_GENIE_v2.pdf",height = 15,w
 # 3) GENIE LUAD All STK_mut vs All other genes
 # -----------------------------
 
+# load file
 ichorcna_data <- read.csv(file="GENIE_LUAD_Fraction_Genome_Altered.csv")
 ichorcna_data <- as.data.frame(ichorcna_data)
 colnames(ichorcna_data)
+
+# boxplot
 yplot <- ggboxplot(ichorcna_data, x = "STK11_mut_vs_Other_genes", y = "Fraction.Genome.Altered", title = "GENIE (LUAD): STK-mut (All samples) vs Non-STK-mut (Other gene mutations)",
                    color = "STK11_mut_vs_Other_genes", fill = "STK11_mut_vs_Other_genes", palette = "jco",
                    alpha = 0.5, font.label = list(size = 42, face = "bold"), ggtheme = theme_bw())
@@ -85,35 +90,15 @@ ggsave("Fraction_Genome_Altered_STK11_LUAD_GENIE_other_genes_v2.pdf",height = 15
 # 4) GENIE LUAD All STK11_mut vs STK11_wt
 # -----------------------------
 
+# load file
 ichorcna_data <- read.csv(file="GENIE_LUAD_Fraction_Genome_Altered.csv")
 ichorcna_data <- as.data.frame(ichorcna_data)
 colnames(ichorcna_data)
+
+#box plot
 yplot <- ggboxplot(ichorcna_data, x = "STK11_mut_vs_Non_STK11_mut", y = "Fraction.Genome.Altered", title = "GENIE (LUAD): STK-mut (All samples) vs Non-STK-mut (All samples)",
                    color = "STK11_mut_vs_Non_STK11_mut", fill = "STK11_mut_vs_Non_STK11_mut", palette = "jco",
                    alpha = 0.5, font.label = list(size = 42, face = "bold"), ggtheme = theme_bw())
 yplot + stat_compare_means()+theme(text = element_text(size = 20))
 ggsave("Fraction_Genome_Altered_STK11_NonSTK11_LUAD_GENIE_other_genes_v2.pdf",height = 15,width = 15)
-
-# 5) GENIE LUSC All STK_mut vs All other genes
-# -----------------------------
-ichorcna_data <- read.csv(file="GENIE_LUSC_Fraction_Genome_Altered.csv")
-ichorcna_data <- as.data.frame(ichorcna_data)
-colnames(ichorcna_data)
-yplot <- ggboxplot(ichorcna_data, x = "STK11_mut_vs_Other_genes", y = "Fraction.Genome.Altered", title = "GENIE (LUSC): STK-mut (All samples) vs Non-STK-mut (Other gene mutations)",
-                   color = "STK11_mut_vs_Other_genes", fill = "STK11_mut_vs_Other_genes", palette = "jco",
-                   alpha = 0.5, font.label = list(size = 42, face = "bold"), ggtheme = theme_bw())
-yplot + stat_compare_means()+theme(text = element_text(size = 20))
-ggsave("Fraction_Genome_Altered_STK11_LUSC_GENIE_other_genes_v2.pdf",height = 15,width = 15)
-
-# 6) GENIE LUSC All STK11_mut vs STK11_wt
-# -----------------------------
-
-ichorcna_data <- read.csv(file="GENIE_LUSC_Fraction_Genome_Altered.csv")
-ichorcna_data <- as.data.frame(ichorcna_data)
-colnames(ichorcna_data)
-yplot <- ggboxplot(ichorcna_data, x = "STK11_mut_vs_Non_STK11_mut", y = "Fraction.Genome.Altered", title = "GENIE (LUSC): STK-mut (All samples) vs Non-STK-mut (All samples)",
-                   color = "STK11_mut_vs_Non_STK11_mut", fill = "STK11_mut_vs_Non_STK11_mut", palette = "jco",
-                   alpha = 0.5, font.label = list(size = 42, face = "bold"), ggtheme = theme_bw())
-yplot + stat_compare_means()+theme(text = element_text(size = 20))
-ggsave("Fraction_Genome_Altered_STK11_NonSTK11_LUSC_GENIE_other_genes_v2.pdf",height = 15,width = 15)
 
