@@ -28,6 +28,8 @@ message_ <- function(m) {
 args <- commandArgs(trailingOnly=TRUE)
 pat <- args[1] 
 
+
+# We've downloaded these RDS files in the shell script part of the jupyter notbook.
 projectdir <- file.path('/home/ubuntu/edsouza-summer2023/lung-cancer-cnv/data')
 seu_file <- file.path('/home/ubuntu/edsouza-summer2023/lung-cancer-cnv/data/numbat/input/NSCLC_qry.rds') 
 ref_file <- file.path('/home/ubuntu/edsouza-summer2023/lung-cancer-cnv/data/numbat/input/T_cells_v7.rds') 
