@@ -1,0 +1,60 @@
+singularity.runOptions = '-C -H "$PWD" -B "$HOME"'
+singularity.cacheDir = '/home/hd/hd_hd/hd_hl269/singularity_cache'
+process{
+  executor = 'slurm'
+  queue    = 'single'
+  withName: 'NFCORE_MCMICRO:MCMICRO:DEEPCELL_MESMER' {
+      time = '12h'
+      cpus = 8
+      maxRetries = 3
+      memory = '500GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:RESTITCH' {
+      time = '12h'
+      cpus = 8
+      maxRetries = 3
+      memory = '260GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:UNSTITCH' {
+      time = '2h'
+      cpus = 4
+      maxRetries = 3
+      memory = '100GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:MCQUANT' {
+      time = '12h'
+      cpus = 4
+      maxRetries = 3
+      memory = '160GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:COMBINEQUANTIFICATIONS' {
+      time = '12h'
+      cpus = 4
+      maxRetries = 3
+      memory = '160GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:EXTRACTCHANNELS' {
+      time = '12h'
+      cpus = 4
+      maxRetries = 3
+      memory = '160GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:SPOTIFLOW' {
+      time = '12h'
+      cpus = 8
+      maxRetries = 3
+      memory = '160GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:SPOT2CELL' {
+      time = '12h'
+      cpus = 8
+      maxRetries = 3
+      memory = '60GB'
+  }
+  withName: 'NFCORE_MCMICRO:MCMICRO:MAPS' {
+      time = '12h'
+      cpus = 8
+      maxRetries = 3
+      memory = '200GB'
+  }
+}

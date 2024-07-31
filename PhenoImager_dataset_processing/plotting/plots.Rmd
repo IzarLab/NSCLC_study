@@ -1,0 +1,202 @@
+---
+title: "Statistics and plots for Brainmets project"
+author: "Kresimir Bestak"
+date: "2024-07-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Load packages
+```{r}
+library(dplyr)
+library(tidyr)
+library(stats)
+library(ggplot2)
+```
+
+Load data and rename columns
+```{r}
+data <- read.csv("/Users/kbestak/Documents/kbestak/phd/brainmets/grouped_phenotypes_per_tissue_resetindex_20240715.csv")
+names(data)[22] <-  "total_no_immune_or_astrocytes_CINp"
+names(data)[23] <-  "total_CINp"
+names(data)[24] <-  "Macrophages_out_of_Immune_cellsp"
+names(data)[25] <-  "Epithelial_CINp"
+names(data)[26] <-  "Macrophages_CINp"
+names(data)[27] <-  "Tcells_CINp"
+names(data)[28] <-  "Astrocytes_CINp"
+names(data)[29] <-  "other_CINp"
+```
+
+Define functions
+```{r}
+stats_from_data <- function(data, group1, group2, column) {
+  # Filter data for the specified tissue types
+  data_subset <- data[,c("patientid", "tissue_type",column)]
+  paired_data <- data_subset %>% 
+    filter(tissue_type %in% c(group1, group2))
+  paired_data_pivot <- paired_data %>% 
+    pivot_wider(names_from = tissue_type, values_from = column) %>%
+    drop_na()
+  
+  # Perform paired t-test and Wilcoxon signed-rank test
+  ttest_results <- t.test(paired_data_pivot[[group1]], paired_data_pivot[[group2]], paired = TRUE)
+  wilcoxon_results <- wilcox.test(paired_data_pivot[[group1]], paired_data_pivot[[group2]], paired = TRUE)
+  
+  return(list(
+    ttest_results = ttest_results,
+    wilcoxon_results = wilcoxon_results,
+    group1_values = paired_data_pivot[[group1]],
+    group2_values = paired_data_pivot[[group2]]
+  ))
+}
+
+lung2lung_stats <- function(data, column) {
+
+  data_subset <- data[,c("patientid", "tissue_type",column)]
+
+  data_pivot <- data_subset %>% 
+    pivot_wider(names_from = tissue_type, values_from = column)
+  
+  # Identify nonzero brain and extracranial indexes
+  nonzero_brain <- data_pivot %>% 
+    filter(!is.na(brain)) %>% 
+    pull(patientid) %>% 
+    as.character()
+  
+  nonzero_extracranial <- data_pivot %>% 
+    filter(!is.na(extracranial)) %>% 
+    pull(patientid) %>% 
+    as.character()
+  
+  # Select and drop NA values for lung paired to brain and extracranial
+  lung_paired_to_brain <- data_pivot %>% 
+    filter(patientid %in% nonzero_brain) %>% 
+    select(lung) %>% 
+    drop_na() %>% 
+    pull()
+  
+  lung_paired_to_extracranial <- data_pivot %>% 
+    filter(patientid %in% nonzero_extracranial) %>% 
+    select(lung) %>% 
+    drop_na() %>% 
+    pull()
+  
+  # Perform Mann-Whitney U test (Wilcoxon rank-sum test in R)
+  mannwhitneyu_results <- wilcox.test(lung_paired_to_brain, lung_paired_to_extracranial)
+  
+  return(list(
+    mannwhitneyu_results = mannwhitneyu_results,
+    lung_paired_to_brain = lung_paired_to_brain,
+    lung_paired_to_extracranial = lung_paired_to_extracranial
+  ))
+}
+
+get_stats <- function(data, target_column) {
+  result_paired_brainmet <- stats_from_data(data, "lung", "brain", target_column)
+  result_paired_extracranialmet <- stats_from_data(data, "lung", "extracranial", target_column)
+  result_lungs <- lung2lung_stats(data, target_column)
+  
+  return(list(
+    lung_to_brain_paired = result_paired_brainmet$ttest_results$p.value,
+    lung_to_extra_paired = result_paired_extracranialmet$ttest_results$p.value,
+    lung_to_lung_unpaired = result_lungs$mannwhitneyu_results$p.value
+  ))
+}
+
+rearrange_dataframe <- function(data, target_column){
+  data_subset <- data[,c("patientid", "tissue_type", target_column)]
+  data_subset$group <- NA
+  data_subset$group_broad <- NA
+  df <- data_subset
+  for (pid in unique(df$patientid)) {
+    # Extract brain value for the current patientid
+    brain_value <- df[[target_column]][df$patientid == pid & df$tissue_type == "brain"]
+    if (length(brain_value) == 0) {
+      brain_value <- NA
+    }
+    
+    # Categorize based on tissue_type and 
+    for (i in 1:nrow(df)) {
+      if (df$patientid[i] == pid) {
+        if (df$tissue_type[i] == "brain") {
+          df$group[i] <- "brain"
+          df$group_broad[i] <- "brainmet_pat"
+        } else if (df$tissue_type[i] == "extracranial") {
+          df$group[i] <- "extracranial"
+          df$group_broad[i] <- "extracranialmet_pat"
+        } else if (df$tissue_type[i] == "lung" && !is.na(brain_value) && !is.na(df[[target_column]][i])) {
+          df$group[i] <- "lung_brain"
+          df$group_broad[i] <- "brainmet_pat"
+        } else if (df$tissue_type[i] == "lung" && is.na(brain_value) && !is.na(df[[target_column]][i])) {
+          df$group[i] <- "lung_extracranial"
+          df$group_broad[i] <- "extracranialmet_pat"
+  
+        }
+      }
+    }
+  }
+  data_subset <- df
+  ordered_groups <- c("lung_brain", "brain", "lung_extracranial", "extracranial")
+  data_subset %>% drop_na() -> data_subset
+  data_subset$group <- factor(data_subset$group, levels = ordered_groups)
+  data_subset$group_broad <- factor(data_subset$group_broad, levels = c("brainmet_pat", "extracranialmet_pat"))
+  return(data_subset)
+}
+
+create_plot <- function(data, pvalues, target_column, tag) {
+  y_position <- max(data[[target_column]], na.rm = TRUE) + 1.5
+  
+  plot <- ggplot(data, aes(x = group_broad, y = .data[[target_column]], fill = group)) +
+    geom_boxplot(position = position_dodge(width = 0.6), width = 0.6) +  # Narrower boxes
+    labs(title = paste(target_column, "by Tissue Type Group"), x = "Group", y = target_column) +
+    theme_minimal() +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    ) +
+    scale_y_continuous(limits = c(0, y_position + 10)) +
+    scale_x_discrete(labels = c("lung_brain" = "Lung (Brainmet patients)", "brain" = "Brain", 
+                                "lung_extracranial" = "Lung (Extracranialmet patients)", "extracranial" = "Extracranial")) +
+    annotate("text", x = 1, y = y_position + 1, label = round(pvalues$lung_to_brain_paired, digits = 3), size = 3) +
+    annotate("text", x = 2, y = y_position + 1, label = round(pvalues$lung_to_extra_paired, digits = 3), size = 3) +
+    annotate("text", x = 1.35, y = y_position + 5, label = round(pvalues$lung_to_lung_unpaired, digits = 3), size = 3) +
+    geom_segment(aes(x = 0.85, xend = 1.15, y = y_position, yend = y_position), color = "black", linewidth = 0.5) +
+    geom_segment(aes(x = 1.85, xend = 2.15, y = y_position, yend = y_position), color = "black", linewidth = 0.5) +
+    geom_segment(aes(x = 0.85, xend = 1.85, y = y_position + 3.5, yend = y_position + 3.5), color = "black", linewidth = 0.5)
+
+  ggsave(paste("/Users/kbestak/Documents/kbestak/phd/brainmets/MAPS_final_ground_truth/plots/",target_column,tag, ".png", sep=""), width = 8, height = 8)
+  return(plot)
+}
+
+run_all <- function(data, target_column, tag) {
+  stat <- get_stats(data, target_column)
+  data_subset <- rearrange_dataframe(data, target_column)
+  pl <- create_plot(data_subset, stat, target_column, tag)
+}
+
+```
+
+
+Run statistical analysis and create plots 
+```{r plots}
+list_of_target_column <- c("total_CINp", "other_CINp", "total_no_immune_or_astrocytes_CINp", "Epithelial_CINp", "Macrophages_out_of_Immune_cellsp")
+tag = "20240715"
+for (target_column in list_of_target_column){
+  plots <- run_all(data, target_column, tag)
+}
+
+```
+
+
+
+
+
+
+
+
